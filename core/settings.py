@@ -11,7 +11,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security
 SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key-change-this-in-production')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
+
+# ─── ALLOWED_HOSTS ──────────────────────────────────────────────────────────
+# Always allow localhost and Render domains
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.onrender.com',  # Wildcard for all Render subdomains
+    'expiry-backend-p7g6.onrender.com',
+]
+
+# If DEBUG is True, allow all hosts (for local development)
+if DEBUG:
+    ALLOWED_HOSTS.append('*')
 
 # Application definition
 INSTALLED_APPS = [
@@ -65,22 +77,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ─── Database - Supabase PostgreSQL ──────────────────────────────────────────
-# Use DATABASE_URL from environment (Supabase connection string)
-# Fallback to SQLite for local development
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
-    # Production: Use Supabase PostgreSQL
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=True,  # Supabase requires SSL
+            ssl_require=True,
         )
     }
 else:
-    # Local development: Use SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -137,13 +145,13 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.getenv(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000'
+        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,https://expiry-backend-p7g6.onrender.com'
     ).split(',') if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()
+    origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'https://expiry-backend-p7g6.onrender.com,http://localhost:5173').split(',') if origin.strip()
 ]
 
 # ─── Security (Production) ──────────────────────────────────────────────────
@@ -169,6 +177,6 @@ CELERY_TIMEZONE = 'Africa/Lagos'
 CELERY_BEAT_SCHEDULE = {
     'check-expiry-daily': {
         'task': 'products.tasks.check_expiry_alerts',
-        'schedule': 86400,  # 24 hours
+        'schedule': 86400,
     },
 }
