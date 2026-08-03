@@ -7,13 +7,13 @@ services:
     startCommand: "gunicorn core.wsgi:application"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.12.10  # Change from 3.11.9 to 3.12.10
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: ".onrender.com,localhost,127.0.0.1"
       - key: DATABASE_URL
         sync: false
       - key: CORS_ALLOWED_ORIGINS

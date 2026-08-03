@@ -25,8 +25,7 @@ CATEGORIES = [
     {'name': 'Canned Goods', 'description': 'Canned vegetables, soups, and preserved foods'},
 ]
 
-# ─── Products with Various Expiry Dates ────────────────────────────────────
-# Today's date for reference
+# ─── Today's date ────────────────────────────────────────────────────────────
 today = datetime.now().date()
 
 PRODUCTS = [
@@ -323,22 +322,25 @@ PRODUCTS = [
 
 def seed_categories():
     print("Seeding categories...")
+    count = 0
     for cat_data in CATEGORIES:
         category, created = Category.objects.get_or_create(
             name=cat_data['name'],
             defaults={'description': cat_data['description']}
         )
         if created:
-            print(f"  Created category: {category.name}")
+            count += 1
+            print(f"  Created: {category.name}")
+    print(f"✅ Categories seeded: {count}")
 
 def seed_products():
     print("\nSeeding products...")
-    product_count = 0
+    count = 0
     for product_data in PRODUCTS:
         try:
             category = Category.objects.get(name=product_data['category'])
         except Category.DoesNotExist:
-            print(f"  Warning: Category '{product_data['category']}' not found, skipping...")
+            print(f"  ⚠️ Category '{product_data['category']}' not found, skipping...")
             continue
 
         product, created = Product.objects.get_or_create(
@@ -354,11 +356,11 @@ def seed_products():
             }
         )
         if created:
-            product_count += 1
-            status = "EXPIRED" if product.is_expired else "EXPIRING SOON" if product.is_expiring_soon else "ACTIVE"
+            count += 1
+            status = "EXPIRED" if product.expiry_date < today else "ACTIVE"
             print(f"  Created: {product.name} | Expiry: {product.expiry_date} | Status: {status}")
 
-    print(f"\n✅ Total products seeded: {product_count}")
+    print(f"✅ Products seeded: {count}")
 
 def main():
     print("=" * 60)
@@ -371,12 +373,12 @@ def main():
     print("\n" + "=" * 60)
     print("SEEDING COMPLETE!")
     print("=" * 60)
-    print(f"Categories: {Category.objects.count()}")
-    print(f"Products: {Product.objects.count()}")
-    print("\nProduct Status Summary:")
-    print(f"  Expired: {Product.objects.filter(expiry_date__lt=datetime.now().date()).count()}")
-    print(f"  Expiring Today: {Product.objects.filter(expiry_date=datetime.now().date()).count()}")
-    print(f"  Active: {Product.objects.filter(expiry_date__gt=datetime.now().date()).count()}")
+    print(f"📊 Categories: {Category.objects.count()}")
+    print(f"📦 Products: {Product.objects.count()}")
+    print("\n📋 Product Status Summary:")
+    print(f"  Expired: {Product.objects.filter(expiry_date__lt=today).count()}")
+    print(f"  Expiring Today: {Product.objects.filter(expiry_date=today).count()}")
+    print(f"  Active: {Product.objects.filter(expiry_date__gt=today).count()}")
 
 if __name__ == "__main__":
     main()
