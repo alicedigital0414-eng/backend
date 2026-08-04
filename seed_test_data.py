@@ -6,6 +6,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from products.models import Product, Category
 
 User = get_user_model()
@@ -391,53 +392,66 @@ PRODUCTS = [
 
 def seed_categories():
     print("Seeding categories...")
-    count = 0
+    created_count = 0
+    existing_count = 0
+    
     for cat_data in CATEGORIES:
         category, created = Category.objects.get_or_create(
             name=cat_data['name'],
             defaults={'description': cat_data['description']}
         )
         if created:
-            count += 1
+            created_count += 1
             print(f"  Created: {category.name}")
-    print(f"Categories seeded: {count}")
-    return count
+        else:
+            existing_count += 1
+            print(f"  Exists: {category.name}")
+            
+    print(f"Categories: {created_count} created, {existing_count} already exist")
+    return created_count
 
 def seed_products():
     print("\nSeeding products...")
-    count = 0
-    errors = 0
+    created_count = 0
+    existing_count = 0
+    error_count = 0
     
     for product_data in PRODUCTS:
         try:
             category = Category.objects.get(name=product_data['category'])
         except Category.DoesNotExist:
             print(f"  Warning: Category '{product_data['category']}' not found, skipping...")
-            errors += 1
+            error_count += 1
             continue
 
         # Remove category from data for create
         product_dict = product_data.copy()
         product_dict.pop('category')
         
-        # Create or get product
-        product, created = Product.objects.get_or_create(
-            sku=product_dict['sku'],
-            defaults=product_dict
-        )
-        
-        if created:
-            count += 1
-            status = "EXPIRED" if product.expiry_date < today else "ACTIVE"
-            days = (product.expiry_date - today).days
-            print(f"  Created: {product.product_name} | Expiry: {product.expiry_date} | Days: {days} | Status: {status}")
-        else:
-            print(f"  Skipped: {product.product_name} (already exists)")
+        try:
+            product, created = Product.objects.get_or_create(
+                sku=product_dict['sku'],
+                defaults=product_dict
+            )
             
-    print(f"Products seeded: {count}")
-    if errors > 0:
-        print(f"  Errors: {errors}")
-    return count
+            if created:
+                created_count += 1
+                status = "EXPIRED" if product.expiry_date < today else "ACTIVE"
+                days = (product.expiry_date - today).days
+                print(f"  Created: {product.product_name} | Expiry: {product.expiry_date} | Days: {days} | Status: {status}")
+            else:
+                existing_count += 1
+                print(f"  Exists: {product.product_name} (SKU: {product.sku})")
+                
+        except IntegrityError as e:
+            error_count += 1
+            print(f"  Error creating {product_data['product_name']}: {str(e)}")
+        except Exception as e:
+            error_count += 1
+            print(f"  Unexpected error for {product_data['product_name']}: {str(e)}")
+            
+    print(f"Products: {created_count} created, {existing_count} already exist, {error_count} errors")
+    return created_count, existing_count, error_count
 
 def main():
     print("=" * 60)
@@ -453,33 +467,27 @@ def main():
         print(f"Database connection failed: {e}")
         return
     
-    # Get or create admin user for added_by field
-    admin_user, created = User.objects.get_or_create(
-        username='admin',
-        defaults={
-            'email': 'admin@gmail.com',
-            'is_staff': True,
-            'is_superuser': True
-        }
-    )
-    if created:
-        admin_user.set_password('admin123')
-        admin_user.save()
-        print("Admin user created")
-    
     # Run seeding
-    categories_count = seed_categories()
-    products_count = seed_products()
+    categories_created = seed_categories()
+    products_created, products_existing, products_errors = seed_products()
     
     print("\n" + "=" * 60)
     print("SEEDING COMPLETE!")
     print("=" * 60)
-    print(f"Categories: {Category.objects.count()}")
-    print(f"Products: {Product.objects.count()}")
+    
+    # Get counts from database
+    total_categories = Category.objects.count()
+    total_products = Product.objects.count()
+    
+    print(f"Total Categories: {total_categories}")
+    print(f"Total Products: {total_products}")
     print("\nProduct Status Summary:")
     print(f"  Expired: {Product.objects.filter(expiry_date__lt=today).count()}")
     print(f"  Expiring Today: {Product.objects.filter(expiry_date=today).count()}")
     print(f"  Active: {Product.objects.filter(expiry_date__gt=today).count()}")
+    
+    if products_errors > 0:
+        print(f"\nWarning: {products_errors} errors occurred during seeding")
 
 if __name__ == "__main__":
     main()
