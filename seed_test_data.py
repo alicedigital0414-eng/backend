@@ -7,6 +7,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from products.models import Product, Category
 
 User = get_user_model()
@@ -78,63 +79,118 @@ PRODUCTS = [
 ]
 
 def seed_categories():
-    print("Seeding categories...")
-    count = 0
+    """Seed categories if they don't exist"""
+    print("📂 Seeding categories...")
+    created_count = 0
+    existing_count = 0
+    
     for cat_data in CATEGORIES:
         category, created = Category.objects.get_or_create(
             name=cat_data['name'],
             defaults={'description': cat_data['description']}
         )
         if created:
-            count += 1
-            print(f"  Created: {category.name}")
-    print(f"✅ Categories seeded: {count}")
+            created_count += 1
+            print(f"  ✅ Created: {category.name}")
+        else:
+            existing_count += 1
+    
+    print(f"📊 Categories: {created_count} created, {existing_count} already exist")
+    return created_count
 
 def seed_products():
-    print("\nSeeding products...")
-    count = 0
+    """Seed products if they don't exist (check by batch_number)"""
+    print("\n📦 Seeding products...")
+    created_count = 0
+    skipped_count = 0
+    error_count = 0
+    
     for product_data in PRODUCTS:
         try:
-            category = Category.objects.get(name=product_data['category'])
-        except Category.DoesNotExist:
-            print(f"  ⚠️ Category '{product_data['category']}' not found, skipping...")
-            continue
+            # Get or create category
+            category, _ = Category.objects.get_or_create(
+                name=product_data['category']
+            )
+            
+            # Check if product already exists by batch_number
+            product, created = Product.objects.get_or_create(
+                batch_number=product_data['batch_number'],
+                defaults={
+                    'name': product_data['name'],
+                    'description': product_data['description'],
+                    'category': category,
+                    'expiry_date': product_data['expiry_date'],
+                    'quantity': product_data['quantity'],
+                    'price': product_data['price'],
+                    'alert_days': product_data['alert_days'],
+                }
+            )
+            
+            if created:
+                created_count += 1
+                status = "🔴 EXPIRED" if product.expiry_date < today else "🟢 ACTIVE"
+                print(f"  ✅ Created: {product.name} | Expiry: {product.expiry_date} | {status}")
+            else:
+                skipped_count += 1
+                # Optionally update existing product
+                # product.name = product_data['name']
+                # product.save()
+                
+        except IntegrityError as e:
+            error_count += 1
+            print(f"  ❌ Error creating {product_data['name']}: {e}")
+        except Exception as e:
+            error_count += 1
+            print(f"  ❌ Unexpected error for {product_data['name']}: {e}")
+    
+    print(f"📊 Products: {created_count} created, {skipped_count} skipped (already exist), {error_count} errors")
+    return created_count
 
-        product, created = Product.objects.get_or_create(
-            batch_number=product_data['batch_number'],
-            defaults={
-                'name': product_data['name'],
-                'description': product_data['description'],
-                'category': category,
-                'expiry_date': product_data['expiry_date'],
-                'quantity': product_data['quantity'],
-                'price': product_data['price'],
-                'alert_days': product_data['alert_days'],
-            }
-        )
-        if created:
-            count += 1
-            status = "EXPIRED" if product.expiry_date < today else "ACTIVE"
-            print(f"  Created: {product.name} | Expiry: {product.expiry_date} | Status: {status}")
-    print(f"✅ Products seeded: {count}")
+def check_database_connection():
+    """Check if database is accessible"""
+    try:
+        from django.db import connection
+        connection.ensure_connection()
+        print("✅ Database connection successful!")
+        return True
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        return False
 
 def main():
     print("=" * 60)
-    print("SEEDING EXPIRY ALERT SYSTEM DATABASE")
+    print("🚀 SEEDING EXPIRY ALERT SYSTEM DATABASE")
     print("=" * 60)
     
-    seed_categories()
-    seed_products()
+    # Check database connection first
+    if not check_database_connection():
+        print("❌ Cannot proceed with seeding due to database connection issues.")
+        return
     
-    print("\n" + "=" * 60)
-    print("SEEDING COMPLETE!")
-    print("=" * 60)
-    print(f"📊 Categories: {Category.objects.count()}")
-    print(f"📦 Products: {Product.objects.count()}")
-    print("\n📋 Product Status Summary:")
-    print(f"  Expired: {Product.objects.filter(expiry_date__lt=today).count()}")
-    print(f"  Expiring Today: {Product.objects.filter(expiry_date=today).count()}")
-    print(f"  Active: {Product.objects.filter(expiry_date__gt=today).count()}")
+    try:
+        # Seed categories
+        categories_created = seed_categories()
+        
+        # Seed products
+        products_created = seed_products()
+        
+        # Summary
+        print("\n" + "=" * 60)
+        print("✅ SEEDING COMPLETE!")
+        print("=" * 60)
+        print(f"📊 Categories: {Category.objects.count()} total")
+        print(f"📦 Products: {Product.objects.count()} total")
+        print("\n📋 Product Status Summary:")
+        print(f"  🔴 Expired: {Product.objects.filter(expiry_date__lt=today).count()}")
+        print(f"  🟡 Expiring Today: {Product.objects.filter(expiry_date=today).count()}")
+        print(f"  🟢 Active: {Product.objects.filter(expiry_date__gt=today).count()}")
+        
+        if categories_created == 0 and products_created == 0:
+            print("\n⚠️ No new data was seeded. Database already contains data.")
+        
+    except Exception as e:
+        print(f"\n❌ Seeding failed with error: {e}")
+        raise
 
 if __name__ == "__main__":
     main()

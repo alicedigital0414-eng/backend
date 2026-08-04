@@ -13,8 +13,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com', '.vercel.app']
 
-# ─── Database ────────────────────────────────────────────────────────────────
-# Use DATABASE_URL directly from Render PostgreSQL
+# Database Configuration - Using Supabase Transaction Pooler
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
@@ -23,7 +22,7 @@ if DATABASE_URL:
             default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=False,  # Render internal connections don't need SSL
+            ssl_require=True,
         )
     }
 else:
@@ -34,7 +33,6 @@ else:
         }
     }
 
-# ─── Rest of settings (keep the same) ──────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
