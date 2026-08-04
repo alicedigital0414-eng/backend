@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-    'corsheaders',
+    'corsheaders',  # Make sure this is here
     'django_filters',
     'dj_database_url',
     'products',
@@ -50,7 +50,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Must be at the top
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -121,16 +121,50 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
+# ============================================
+# CORS CONFIGURATION - FIX FOR FRONTEND
+# ============================================
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://*.vercel.app',
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://frontend-theta-eosin-89.vercel.app",  # Your current frontend URL
+    "https://*.vercel.app",  # Allow all Vercel preview deployments
 ]
+
+# If you want to allow all origins (only for development)
+# CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
+    'http://localhost:3000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'https://frontend-theta-eosin-89.vercel.app',
     'https://*.vercel.app',
 ]
 
