@@ -2,12 +2,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
-import dj_database_url
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ─── SECURITY ────────────────────────────────────────────────────────────────
@@ -15,15 +12,12 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key-change-in-production')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # ─── ALLOWED_HOSTS ──────────────────────────────────────────────────────────
-# Read from environment, split by comma, clean whitespace
 _allowed = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app').split(',')
 ALLOWED_HOSTS = [h.strip() for h in _allowed if h.strip()]
-
-# If DEBUG is True, allow all hosts (for local development)
 if DEBUG:
     ALLOWED_HOSTS.append('*')
 
-# ─── Application Definition ────────────────────────────────────────────────
+# ─── APPLICATION DEFINITION ────────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -31,13 +25,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Third party apps
+    # Third party
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
     'dj_database_url',
-    # Local apps
+    # Local
     'products',
     'accounts',
 ]
@@ -75,9 +69,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ─── DATABASE ────────────────────────────────────────────────────────────────
+# Use individual PostgreSQL settings to avoid IPv6 issues
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
+    import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -108,7 +104,7 @@ TIME_ZONE = 'Africa/Lagos'
 USE_I18N = True
 USE_TZ = True
 
-# ─── STATIC & MEDIA FILES ──────────────────────────────────────────────────
+# ─── STATIC & MEDIA ────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -126,10 +122,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-    ],
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
@@ -140,22 +133,16 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
 }
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
-# Read from environment, split by comma, clean whitespace
-_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,https://*.vercel.app')
+_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://*.vercel.app')
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
-# ─── CSRF ────────────────────────────────────────────────────────────────────
 _csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://*.vercel.app')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
 
-# ─── FRONTEND URL ──────────────────────────────────────────────────────────
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 # ─── SECURITY (Production) ────────────────────────────────────────────────
@@ -164,8 +151,6 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # ─── EMAIL ──────────────────────────────────────────────────────────────────
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
@@ -184,6 +169,6 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     'check-expiry-daily': {
         'task': 'products.tasks.check_expiry_alerts',
-        'schedule': 86400,  # 24 hours
+        'schedule': 86400,
     },
 }
