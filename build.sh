@@ -17,27 +17,29 @@ python manage.py shell << EOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-# Check if superuser exists
-if not User.objects.filter(username='admin@gmail.com').exists():
-    if not User.objects.filter(email='admin@gmail.com').exists():
+# Check if superuser exists with username 'admin'
+if not User.objects.filter(username='admin').exists():
+    # Check if user exists with email
+    if User.objects.filter(email='admin@gmail.com').exists():
+        user = User.objects.get(email='admin@gmail.com')
+        # Update username to 'admin'
+        user.username = 'admin'
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        print("Updated existing user to superuser with username 'admin'")
+    else:
+        # Create new superuser with username 'admin'
         User.objects.create_superuser(
-            username='admin@gmail.com',
+            username='admin',
             email='admin@gmail.com',
             password='admin123',
             first_name='Admin',
             last_name='User'
         )
-        print("Superuser created successfully")
-    else:
-        print("User with email already exists but username differs, updating...")
-        user = User.objects.get(email='admin@gmail.com')
-        user.username = 'admin@gmail.com'
-        user.is_superuser = True
-        user.is_staff = True
-        user.save()
-        print("Superuser updated successfully")
+        print("Superuser 'admin' created successfully")
 else:
-    print("Superuser already exists, skipping creation")
+    print("Superuser 'admin' already exists, skipping creation")
 EOF
 
 echo "Seeding database with initial data..."
