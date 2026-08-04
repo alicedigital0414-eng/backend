@@ -6,15 +6,8 @@ echo "=========================================="
 echo "Starting Build Process"
 echo "=========================================="
 
-echo "Python version:"
-python --version
-
 echo "Installing dependencies..."
-pip install --upgrade pip
 pip install -r requirements.txt
-
-# Force install psycopg2-binary with no build isolation
-pip install --no-binary psycopg2-binary psycopg2-binary==2.9.10
 
 echo "Running migrations..."
 python manage.py migrate --noinput
